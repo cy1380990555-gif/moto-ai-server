@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?  @unique
+  role      String   @default("store_staff")
+  storeId   String?
+  store     Store?   @relation(fields: [storeId], references: [id])
+  regionId  String?
+  threads   ChatThread[]
+  createdAt DateTime @default(now())
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  regionId  String?
+  address   String?
+  status    String   @default("active")
+  users     User[]
+  inventory Inventory[]
+  createdAt DateTime @default(now())
+}
+
+model Inventory {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  skuName     String
+  model       String
+  color       String?
+  quantity    Int      @default(0)
+  safetyStock Int      @default(5)
+  updatedAt   DateTime @updatedAt
+}
+
+model ChatThread {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String?
+  domain    String   @default("workbench")
+  messages  ChatMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  threadId    String
+  thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role        String
+  content     String
+  resultCards String?  // JSON string for structured cards
+  createdAt   DateTime @default(now())
+}
+
+model MorningBrief {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String
+  date      String
+  summary   String
+  kpis      String   // JSON
+  anomalies String   // JSON
+  actions   String   // JSON
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date, role])
+}
+
+model AgentConfig {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  status    String   @default("idle")
+  config    String?  // JSON
+  events    AgentEvent[]
+  updatedAt DateTime @updatedAt
+}
+
+model AgentEvent {
+  id           String   @id @default(cuid())
+  agentId      String
+  agent        AgentConfig @relation(fields: [agentId], references: [id])
+  type         String
+  title        String
+  description  String?
+  autoResolved Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
