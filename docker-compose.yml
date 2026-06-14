@@ -1,0 +1,40 @@
+services:
+  # 后端 API 服务
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: moto-ai-server
+    ports:
+      - "3099:3099"
+    environment:
+      - PORT=3099
+      - DATABASE_URL=file:./dev.db
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
+      - QWEN_MODEL=${QWEN_MODEL:-qwen-turbo}
+    volumes:
+      - server-data:/app/prisma
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3099/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # 前端 Web 服务
+  web:
+    build:
+      context: ../moto-ai-workbench
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://server:3099
+    container_name: moto-ai-web
+    ports:
+      - "80:80"
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  server-data:
